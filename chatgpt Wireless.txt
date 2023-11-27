@@ -1,0 +1,45 @@
+set ns [new Simulator]
+
+# Create nodes
+set numNodes 60
+for {set i 0} {$i < $numNodes} {incr i} {
+  set node($i) [$ns node]
+}
+
+# Create a wireless channel
+set channel [new Channel/WirelessChannel]
+
+# Create a wireless propagation model
+set propModel [new Propagation/TwoRayGround]
+
+# Create wireless interface and attach to nodes
+for {set i 0} {$i < $numNodes} {incr i} {
+  set wifiIf [$ns node-config -adhocRouting PROTO] ;# PROTO: DSDV, DSR, AODV, etc.
+  $wifiIf set channel_ $channel
+  $wifiIf set propagationModel_ $propModel
+  $ns node-config -topoInstance $wifiIf -topoInstance $propModel
+  $ns node-config -topoInstance $channel
+}
+
+# Set traffic parameters
+set packetSize 1000
+set interval 0.01
+set cbr [new Application/Traffic/CBR]
+$cbr set packetSize_ $packetSize
+$cbr set interval_ $interval
+
+# Attach CBR traffic to node(0)
+$cbr attach-agent [$node(0) agent]
+
+# Create a UDP agent and attach it to node(1)
+set udp [new Agent/UDP]
+$ns attach-agent $node(1) $udp
+
+# Connect traffic source and sink
+$ns connect $cbr $udp
+
+# Set simulation end time
+$ns at 100.0 "$ns stop"
+
+# Run the simulation
+$ns run
